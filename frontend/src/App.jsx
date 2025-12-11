@@ -9,7 +9,7 @@ import {
 // --- CÓDIGO INTELIGENTE PARA URLs (SOLUCIÓN DEFINITIVA) ---
 // Si estamos en localhost, usa la IP local de Django.
 // Si estamos en un dominio público (ngrok), usa ese mismo dominio como base.
-const API_BASE_URL = 'https://psyclinic.onrender.com'
+const API_BASE_URL = 'https://psyclinic-elena.onrender.com'
 // ********************************************
 
 function App() {
