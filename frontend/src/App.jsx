@@ -6,11 +6,13 @@ import {
   Upload, Paperclip, Eye
 } from 'lucide-react'
 
-// --- CÓDIGO INTELIGENTE PARA URLs (SOLUCIÓN DEFINITIVA) ---
-// Si estamos en localhost, usa la IP local de Django.
-// Si estamos en un dominio público (ngrok), usa ese mismo dominio como base.
-const API_BASE_URL = 'https://psyclinic-elena.onrender.com'
-// ********************************************
+// --- CONFIGURACIÓN INTELIGENTE (DEV vs PROD) ---
+// Si la web se abre en 'localhost', usa tu Django local (Laboratorio).
+// Si la web se abre en Render, usa tu Django de la nube (Real).
+
+const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? 'http://127.0.0.1:8000' 
+  : 'https://psyclinic-elena.onrender.com';
 
 function App() {
   // --- SEGURIDAD ---
