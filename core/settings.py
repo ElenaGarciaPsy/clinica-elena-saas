@@ -28,8 +28,7 @@ DEBUG = True
 ALLOWED_HOSTS = [
     '127.0.0.1', 
     'localhost', 
-    'preobedient-archeologically-haylee.ngrok-free.dev', # <--- ¡CÓPIALO COMPLETO Y CON COMILLAS!
-    '*.ngrok-free.dev'
+    '.onrender.com', # <--- ¡ESTO ES LO NUEVO! El punto delante es importante.
 ]
 
 
