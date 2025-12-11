@@ -130,8 +130,12 @@ STATIC_URL = 'static/'
 # Permitir que React (puerto 5173) hable con Django
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
-    "https://preobedient-archeologically-haylee.ngrok-free.dev", # <--- ¡ESTO FALTABA!
-    "https://*.ngrok-free.dev", # Comodín HTTPS
+    "https://*.onrender.com",  # <--- ¡ESTA ES LA CLAVE! Acepta todo lo que venga de Render
+]
+
+# También actualizamos la confianza para CSRF
+CSRF_TRUSTED_ORIGINS = [
+    "https://*.onrender.com",
 ]
 
 # Configuración de Archivos Multimedia (Fotos, PDFs...)
