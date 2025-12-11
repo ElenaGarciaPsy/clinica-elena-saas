@@ -7,9 +7,6 @@ import {
 } from 'lucide-react'
 
 // --- CONFIGURACIÓN INTELIGENTE (DEV vs PROD) ---
-// Si la web se abre en 'localhost', usa tu Django local (Laboratorio).
-// Si la web se abre en Render, usa tu Django de la nube (Real).
-
 const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://127.0.0.1:8000' 
   : 'https://psyclinic-elena.onrender.com';
@@ -17,10 +14,11 @@ const API_BASE_URL = (window.location.hostname === 'localhost' || window.locatio
 function App() {
   // --- SEGURIDAD ---
   const [token, setToken] = useState(localStorage.getItem('clinica_token'))
+  const [currentUser, setCurrentUser] = useState(localStorage.getItem('clinica_user') || '')
   
   // --- ESTADOS ---
-  const [isRegistering, setIsRegistering] = useState(false) // Nuevo estado
-  const [email, setEmail] = useState('') // Nuevo estado para email
+  const [isRegistering, setIsRegistering] = useState(false)
+  const [email, setEmail] = useState('')
   const [activeTab, setActiveTab] = useState('dashboard')
   const [patients, setPatients] = useState([])
   const [appointments, setAppointments] = useState([]) 
@@ -40,11 +38,28 @@ function App() {
     }
   }, [token])
 
+  // --- FUNCIONES AUXILIARES ---
+  const authHeader = () => ({
+    'Content-Type': 'application/json',
+    'Authorization': `Token ${token}`
+  })
+
+  // --- API CALLS (LECTURA) ---
+  const fetchPatients = () => fetch(API_BASE_URL + '/api/patients/', { headers: authHeader() }).then(r => r.json()).then(setPatients)
+  const fetchAppointments = () => fetch(API_BASE_URL + '/api/appointments/', { headers: authHeader() }).then(r => r.json()).then(setAppointments)
+  
+  const fetchPatientFiles = (patientId) => {
+    fetch(API_BASE_URL + `/api/files/?patient=${patientId}`, { headers: authHeader() })
+      .then(res => res.json())
+      .then(data => setPatientFiles(data))
+  }
+
   // --- FUNCIONES SEGURIDAD ---
   const handleLogin = (e) => {
     e.preventDefault()
-    fetch(API_BASE_URL + '/api-token-auth/', { // URL DINÁMICA
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+    fetch(API_BASE_URL + '/api-token-auth/', { 
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(loginData)
     })
     .then(res => {
@@ -53,6 +68,8 @@ function App() {
     })
     .then(data => {
       localStorage.setItem('clinica_token', data.token)
+      localStorage.setItem('clinica_user', loginData.username)
+      setCurrentUser(loginData.username)
       setToken(data.token)
     })
     .catch(err => alert(err.message))
@@ -69,37 +86,26 @@ function App() {
         email: email 
       })
     })
-    .then(res => {
-      if (!res.ok) throw new Error("Error en el registro. Quizás el usuario ya existe.")
+    .then(async res => {
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(JSON.stringify(errorData));
+      }
       alert("¡Usuario creado! Ahora inicia sesión.")
-      setIsRegistering(false) // Volvemos a la pantalla de login
+      setIsRegistering(false)
     })
-    .catch(err => alert(err.message))
+    .catch(err => alert("Error: " + err.message))
   }
 
   const handleLogout = () => {
     localStorage.removeItem('clinica_token')
+    localStorage.removeItem('clinica_user')
     setToken(null)
+    setCurrentUser('')
     setLoginData({ username: '', password: '' })
   }
 
-  // --- CABECERA ESTÁNDAR ---
-  const authHeader = () => ({
-    'Content-Type': 'application/json',
-    'Authorization': `Token ${token}`
-  })
-
-  // --- API CALLS (LECTURA) ---
-  const fetchPatients = () => fetch(API_BASE_URL + '/api/patients/', { headers: authHeader() }).then(r => r.json()).then(setPatients)
-  const fetchAppointments = () => fetch(API_BASE_URL + '/api/appointments/', { headers: authHeader() }).then(r => r.json()).then(setAppointments)
-  
-  const fetchPatientFiles = (patientId) => {
-    fetch(API_BASE_URL + `/api/files/?patient=${patientId}`, { headers: authHeader() })
-      .then(res => res.json())
-      .then(data => setPatientFiles(data))
-  }
-
-  // --- ACCIONES (ESCRITURA CON LLAVE) ---
+  // --- ACCIONES (ESCRITURA) ---
   const handleFileUpload = (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -115,7 +121,7 @@ function App() {
     })
     .then(res => {
       if(res.ok) { alert("¡Archivo subido correctamente!"); fetchPatientFiles(selectedPatient.id) }
-      else { alert("Error al subir archivo. Asegúrate de que el archivo existe y no sea demasiado grande.") }
+      else { alert("Error al subir archivo.") }
     })
   }
 
@@ -123,7 +129,7 @@ function App() {
     e.preventDefault()
     fetch(API_BASE_URL + '/api/patients/', { 
       method: 'POST', headers: authHeader(),
-      body: JSON.stringify({ ...formData, therapist: 1 })
+      body: JSON.stringify({ ...formData }) // El backend asigna el therapist automáticamente
     }).then(res => { if(res.ok) { fetchPatients(); setFormData({ first_name: '', last_name: '', phone: '' }) } })
   }
 
@@ -139,7 +145,7 @@ function App() {
 
     fetch(API_BASE_URL + '/api/appointments/', { 
       method: 'POST', headers: authHeader(),
-      body: JSON.stringify({ patient: selectedPatient.id, therapist: 1, start_time: newStart.toISOString(), end_time: newEnd.toISOString(), status: 'CONFIRMED' })
+      body: JSON.stringify({ patient: selectedPatient.id, start_time: newStart.toISOString(), end_time: newEnd.toISOString(), status: 'CONFIRMED' })
     }).then(res => { if(res.ok) { alert("¡Cita agendada!"); fetchAppointments(); setAppointmentDate('') } })
   }
 
@@ -164,7 +170,6 @@ function App() {
       .then(res => { if (res.ok) fetchAppointments() })
     }
   }
-  // --- RESTO DE FUNCIONES (IGUAL QUE ANTES) ---
 
   const handleOpenPatient = (patient) => {
     setClinicalNotes(patient.notes || '')
@@ -176,7 +181,7 @@ function App() {
   const generateInvoice = (appointment, patient) => {
     if (!patient) return;
     const doc = new jsPDF()
-    doc.setTextColor(40, 40, 40); doc.setFontSize(20); doc.text("CLÍNICA ELENA", 20, 20)
+    doc.setTextColor(40, 40, 40); doc.setFontSize(20); doc.text(`CLÍNICA ${currentUser.toUpperCase()}`, 20, 20)
     doc.setFontSize(10); doc.text("Psicología y Bienestar", 20, 30); doc.text("NIF: 12345678Z", 20, 35)
     doc.setFontSize(16); doc.text("FACTURA", 150, 20)
     doc.setFontSize(10); doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 150, 35)
@@ -196,7 +201,7 @@ function App() {
   const next7Days = Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() + i); return d })
 
   // --- VISTA LOGIN ---
-if (!token) return (
+  if (!token) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8">
         <h2 className="text-2xl font-bold text-center text-gray-800 mb-8">
@@ -216,7 +221,6 @@ if (!token) return (
             />
           </div>
 
-          {/* Campo extra de Email solo si nos estamos registrando */}
           {isRegistering && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
@@ -267,7 +271,11 @@ if (!token) return (
     <div className="flex h-screen bg-gray-50 font-sans">
       <aside className="w-64 bg-slate-900 text-white flex flex-col shadow-2xl">
         <div className="p-6 border-b border-slate-800">
-           <h1 className="text-xl font-bold flex items-center gap-2"><div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">🦋</div>Clínica Elena</h1>
+           {/* TITULO DINÁMICO */}
+           <h1 className="text-xl font-bold flex items-center gap-2 capitalize">
+              <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">🦋</div>
+              Clínica {currentUser}
+           </h1>
            <p className="text-xs text-slate-400 mt-1">Versión Pro</p>
         </div>
         <nav className="flex-1 p-4 space-y-2">
@@ -283,9 +291,13 @@ if (!token) return (
         <header className="flex justify-between items-center mb-10">
           <div>
             <h2 className="text-2xl font-bold text-gray-800 capitalize">{activeTab === 'dashboard' ? 'Resumen General' : activeTab}</h2>
-            <p className="text-gray-500 text-sm">Bienvenida, Elena 👋</p>
+            {/* SALUDO DINÁMICO */}
+            <p className="text-gray-500 text-sm capitalize">Bienvenida/o, {currentUser} 👋</p>
           </div>
-          <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden border-2 border-white shadow-sm"><img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Elena" /></div>
+          {/* AVATAR DINÁMICO */}
+          <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden border-2 border-white shadow-sm">
+            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser}`} alt="Avatar" />
+          </div>
         </header>
 
         {activeTab === 'dashboard' && (
