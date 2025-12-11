@@ -19,6 +19,8 @@ function App() {
   const [token, setToken] = useState(localStorage.getItem('clinica_token'))
   
   // --- ESTADOS ---
+  const [isRegistering, setIsRegistering] = useState(false) // Nuevo estado
+  const [email, setEmail] = useState('') // Nuevo estado para email
   const [activeTab, setActiveTab] = useState('dashboard')
   const [patients, setPatients] = useState([])
   const [appointments, setAppointments] = useState([]) 
@@ -52,6 +54,25 @@ function App() {
     .then(data => {
       localStorage.setItem('clinica_token', data.token)
       setToken(data.token)
+    })
+    .catch(err => alert(err.message))
+  }
+
+  const handleRegister = (e) => {
+    e.preventDefault()
+    fetch(API_BASE_URL + '/api/register/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        username: loginData.username, 
+        password: loginData.password,
+        email: email 
+      })
+    })
+    .then(res => {
+      if (!res.ok) throw new Error("Error en el registro. Quizás el usuario ya existe.")
+      alert("¡Usuario creado! Ahora inicia sesión.")
+      setIsRegistering(false) // Volvemos a la pantalla de login
     })
     .catch(err => alert(err.message))
   }
@@ -175,24 +196,71 @@ function App() {
   const next7Days = Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() + i); return d })
 
   // --- VISTA LOGIN ---
-  if (!token) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-        <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md">
-          <div className="text-center mb-8">
-             <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">🦋</div>
-             <h1 className="text-2xl font-bold text-gray-800">Clínica Elena</h1>
-             <p className="text-gray-500">Acceso Profesional</p>
+if (!token) return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8">
+        <h2 className="text-2xl font-bold text-center text-gray-800 mb-8">
+          {isRegistering ? 'Crear Cuenta' : 'Iniciar Sesión'}
+        </h2>
+        
+        <form onSubmit={isRegistering ? handleRegister : handleLogin} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Usuario</label>
+            <input 
+              type="text" 
+              required 
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+              placeholder="Tu usuario"
+              value={loginData.username}
+              onChange={e => setLoginData({...loginData, username: e.target.value})}
+            />
           </div>
-          <form onSubmit={handleLogin} className="space-y-6">
-            <input type="text" value={loginData.username} onChange={e => setLoginData({...loginData, username: e.target.value})} className="w-full p-3 border rounded-xl" placeholder="Usuario" autoFocus />
-            <input type="password" value={loginData.password} onChange={e => setLoginData({...loginData, password: e.target.value})} className="w-full p-3 border rounded-xl" placeholder="Contraseña" />
-            <button type="submit" className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl flex items-center justify-center gap-2"><Lock size={20} /> Entrar</button>
-          </form>
+
+          {/* Campo extra de Email solo si nos estamos registrando */}
+          {isRegistering && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+              <input 
+                type="email" 
+                required 
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                placeholder="tu@email.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+              />
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Contraseña</label>
+            <input 
+              type="password" 
+              required 
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+              placeholder="••••••••"
+              value={loginData.password}
+              onChange={e => setLoginData({...loginData, password: e.target.value})}
+            />
+          </div>
+
+          <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors shadow-md hover:shadow-lg">
+            {isRegistering ? 'Registrarse' : 'Entrar'}
+          </button>
+        </form>
+
+        <div className="mt-6 text-center">
+          <button 
+            onClick={() => setIsRegistering(!isRegistering)}
+            className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+          >
+            {isRegistering 
+              ? '¿Ya tienes cuenta? Inicia sesión aquí' 
+              : '¿No tienes cuenta? Regístrate aquí'}
+          </button>
         </div>
       </div>
-    )
-  }
+    </div>
+  )
 
   // --- VISTA APP ---
   return (
