@@ -127,11 +127,8 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
-# Permitir que React (puerto 5173) hable con Django
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "https://*.onrender.com",  # <--- ¡ESTA ES LA CLAVE! Acepta todo lo que venga de Render
-]
+# Permite acceso desde cualquier lugar (Solución infalible para NetworkError)
+CORS_ALLOW_ALL_ORIGINS = True
 
 # También actualizamos la confianza para CSRF
 CSRF_TRUSTED_ORIGINS = [
