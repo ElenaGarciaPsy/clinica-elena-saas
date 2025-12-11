@@ -37,3 +37,11 @@ class RegisterSerializer(serializers.ModelSerializer):
             password=validated_data['password']
         )
         return user
+    
+    # ... tus otros serializadores ...
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        # Permitimos ver/editar estos campos. El username y email son vitales.
+        fields = ['id', 'username', 'first_name', 'last_name', 'email']

@@ -3,11 +3,22 @@ from rest_framework.permissions import AllowAny
 from django.contrib.auth.models import User
 from .models import Patient, Appointment, PatientFile
 # 👇 AQUÍ AÑADIMOS RegisterSerializer
-from .serializers import PatientSerializer, AppointmentSerializer, PatientFileSerializer, RegisterSerializer
+from .serializers import PatientSerializer, AppointmentSerializer, PatientFileSerializer, RegisterSerializer, UserSerializer
 
 # -----------------------------------------------------------
 # VISTAS MULTI-USUARIO (SaaS) - ESTO YA LO TENÍAS
 # -----------------------------------------------------------
+
+# ... tus otras vistas ...
+
+# Vista para VER y EDITAR el perfil del usuario logueado
+class UserProfileView(generics.RetrieveUpdateAPIView):
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        # Devuelve el usuario que está haciendo la petición (self.request.user)
+        return self.request.user
 
 class PatientViewSet(viewsets.ModelViewSet):
     queryset = Patient.objects.all().order_by('-last_name')

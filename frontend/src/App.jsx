@@ -3,7 +3,7 @@ import { jsPDF } from "jspdf"
 import { 
   LayoutDashboard, Users, Calendar as CalendarIcon, CreditCard, 
   TrendingUp, Clock, LogOut, CalendarDays, FileText, Trash2, Lock,
-  Upload, Paperclip, Eye
+  Upload, Paperclip, Eye, UserCircle
 } from 'lucide-react'
 
 // --- CONFIGURACIÓN INTELIGENTE (DEV vs PROD) ---
@@ -24,6 +24,7 @@ function App() {
   const [appointments, setAppointments] = useState([]) 
   const [selectedPatient, setSelectedPatient] = useState(null)
   const [patientFiles, setPatientFiles] = useState([]) 
+  const [profileData, setProfileData] = useState({ username: '', first_name: '', last_name: '', email: '' })
   
   // --- FORMULARIOS ---
   const [loginData, setLoginData] = useState({ username: '', password: '' })
@@ -35,6 +36,7 @@ function App() {
     if (token) {
       fetchPatients()
       fetchAppointments()
+      fetchProfile() //
     }
   }, [token])
 
@@ -52,6 +54,11 @@ function App() {
     fetch(API_BASE_URL + `/api/files/?patient=${patientId}`, { headers: authHeader() })
       .then(res => res.json())
       .then(data => setPatientFiles(data))
+  }
+  const fetchProfile = () => {
+    fetch(API_BASE_URL + '/api/profile/', { headers: authHeader() })
+      .then(res => res.json())
+      .then(data => setProfileData(data))
   }
 
   // --- FUNCIONES SEGURIDAD ---
@@ -124,7 +131,24 @@ function App() {
       else { alert("Error al subir archivo.") }
     })
   }
-
+const handleUpdateProfile = (e) => {
+    e.preventDefault()
+    fetch(API_BASE_URL + '/api/profile/', {
+      method: 'PUT', // PUT es el verbo para "Actualizar"
+      headers: authHeader(),
+      body: JSON.stringify(profileData)
+    })
+    .then(res => {
+      if (res.ok) {
+        alert("¡Perfil actualizado!")
+        // Actualizamos el nombre en la barra de arriba al instante
+        localStorage.setItem('clinica_user', profileData.username)
+        setCurrentUser(profileData.username)
+      } else {
+        alert("Error al actualizar. Quizás el usuario o email ya existen.")
+      }
+    })
+  }
   const handleCreatePatient = (e) => {
     e.preventDefault()
     fetch(API_BASE_URL + '/api/patients/', { 
@@ -282,6 +306,8 @@ function App() {
           <button onClick={() => {setActiveTab('dashboard'); setSelectedPatient(null)}} className={`w-full flex gap-3 px-4 py-3 rounded-xl transition-all ${activeTab==='dashboard'?'bg-blue-600 text-white':'text-slate-400 hover:text-white'}`}><LayoutDashboard size={20}/> Dashboard</button>
           <button onClick={() => {setActiveTab('patients'); setSelectedPatient(null)}} className={`w-full flex gap-3 px-4 py-3 rounded-xl transition-all ${activeTab==='patients'?'bg-blue-600 text-white':'text-slate-400 hover:text-white'}`}><Users size={20}/> Pacientes</button>
           <button onClick={() => setActiveTab('calendar')} className={`w-full flex gap-3 px-4 py-3 rounded-xl transition-all ${activeTab==='calendar'?'bg-blue-600 text-white':'text-slate-400 hover:text-white'}`}><CalendarIcon size={20}/> Agenda</button>
+          <button onClick={() => setActiveTab('profile')} className={`w-full flex gap-3 px-4 py-3 rounded-xl transition-all ${activeTab==='profile'?'bg-blue-600 text-white':'text-slate-400 hover:text-white'}`}><UserCircle size={20}/> Mi Perfil
+          </button>
           <button onClick={() => setActiveTab('billing')} className={`w-full flex gap-3 px-4 py-3 rounded-xl transition-all ${activeTab==='billing'?'bg-blue-600 text-white':'text-slate-400 hover:text-white'}`}><CreditCard size={20}/> Facturación</button>
         </nav>
         <div className="p-4 border-t border-slate-800"><button onClick={handleLogout} className="w-full flex gap-3 px-4 py-3 text-red-400 hover:bg-red-900/20 rounded-xl"><LogOut size={20}/> Salir</button></div>
@@ -491,7 +517,50 @@ function App() {
               </div>
            </div>
         )}
+{/* 👇 PEGA ESTE BLOQUE ENTERO ANTES DE </main> */}
+        {activeTab === 'profile' && (
+           <div className="max-w-2xl mx-auto animate-in fade-in">
+              <div className="bg-white p-8 rounded-2xl shadow-lg border border-gray-100">
+                 <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                    <UserCircle className="text-blue-600"/> Editar Mi Perfil
+                 </h2>
+                 
+                 <form onSubmit={handleUpdateProfile} className="space-y-6">
+                    <div className="grid grid-cols-2 gap-6">
+                       <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Nombre</label>
+                          <input type="text" className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                             value={profileData.first_name} onChange={e => setProfileData({...profileData, first_name: e.target.value})} />
+                       </div>
+                       <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Apellidos</label>
+                          <input type="text" className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                             value={profileData.last_name} onChange={e => setProfileData({...profileData, last_name: e.target.value})} />
+                       </div>
+                    </div>
 
+                    <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                       <input type="email" className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50"
+                          value={profileData.email} onChange={e => setProfileData({...profileData, email: e.target.value})} />
+                    </div>
+
+                    <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-2">Usuario (Login)</label>
+                       <input type="text" className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-yellow-50"
+                          value={profileData.username} onChange={e => setProfileData({...profileData, username: e.target.value})} />
+                       <p className="text-xs text-gray-500 mt-1">⚠️ Cambiar esto cambiará cómo inicias sesión.</p>
+                    </div>
+
+                    <div className="pt-4 border-t">
+                       <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-md transition-all">
+                          Guardar Cambios
+                       </button>
+                    </div>
+                 </form>
+              </div>
+           </div>
+        )}
       </main>
     </div>
   )
